@@ -10,12 +10,12 @@ const Wrapper = styled.section`
   position: relative;
   margin: 0 auto 2rem auto;
   overflow: hidden;
-  width: 100%;          /* keep narrower width */
-  height: 600px;       /* ✅ increased height */
+  width: 100%;
+  height: 600px;
   border-radius: 8px;
 
   @media (max-width: 768px) {
-    height: 300px;     /* smaller height for mobile */
+    height: 300px;
   }
 `;
 
@@ -90,7 +90,7 @@ const WatchNowButton = styled.button`
 
 const ArrowButton = styled.button<{ $side: "left" | "right" }>`
   position: absolute;
-  top: 50%;                      /* ✅ always middle */
+  top: 50%;
   transform: translateY(-50%);
   ${({ $side }) => ($side === "left" ? "left: 1rem;" : "right: 1rem;")}
   background: rgba(0,0,0,0.5);
@@ -134,8 +134,13 @@ export default function FeaturedShow() {
 
   useEffect(() => {
     async function fetchFeatured() {
-      const res = await tmdb.get("/movie/popular");
-      setMovies(res.data.results.slice(0, 10));
+      try {
+        const res = await tmdb.get("/movie/popular");
+        setMovies(res.data.results.slice(0, 10));
+      } catch (err) {
+        console.error("TMDB fetch failed:", err);
+        setMovies([]); // ✅ prevents fallback overlay
+      }
     }
     fetchFeatured();
   }, []);
@@ -148,9 +153,12 @@ export default function FeaturedShow() {
     return () => clearInterval(interval);
   }, [movies]);
 
-  if (movies.length === 0) return <p style={{color:"white"}}>Loading featured movies...</p>;
+  if (movies.length === 0) {
+    return <p style={{ color: "white" }}>No featured movies available.</p>;
+  }
 
-  const prevSlide = () => setIndex((prev) => (prev - 1 + movies.length) % movies.length);
+  const prevSlide = () =>
+    setIndex((prev) => (prev - 1 + movies.length) % movies.length);
   const nextSlide = () => setIndex((prev) => (prev + 1) % movies.length);
 
   return (
@@ -158,16 +166,18 @@ export default function FeaturedShow() {
       {movies.map((movie: any, i: number) => {
         const imageUrl = movie.backdrop_path
           ? `https://image.tmdb.org/t/p/original${movie.backdrop_path}`
-          : "/fallback.jpg";
+          : null; // ✅ no hardcoded fallback
 
         return (
           <Slide key={movie.id} $active={i === index}>
-            <Image
-              src={imageUrl}
-              alt={movie.title}
-              fill
-              style={{ borderRadius: "8px", objectFit: "cover" }}
-            />
+            {imageUrl && (
+              <Image
+                src={imageUrl}
+                alt={movie.title}
+                fill
+                style={{ borderRadius: "8px", objectFit: "cover" }}
+              />
+            )}
             <Title>{movie.title}</Title>
             <WatchlistButton>+ Watchlist</WatchlistButton>
             <WatchNowButton>Watch Now</WatchNowButton>
